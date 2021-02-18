@@ -12,6 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "jsxFactory": "createElement",
     "noImplicitUseStrict": true,
-    "alwaysStrict": false
+    "alwaysStrict": false,
+    "declaration": true
   }
 }

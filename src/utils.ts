@@ -1,36 +1,29 @@
 import * as Elementa from '../../Elementa';
 
-/**
- * @typedef {number | string | Elementa.GeneralConstraint} Size 
- */
-/**
- * @typedef {{
- *  x?: Size,
- *  y?: Size,
- *  w?: Size,
- *  h?: Size,
- *  effects?: Elementa.Effect[],
- * }} BasicProps 
- */
-/**
- * @typedef {{
- *  children?: (undefined | string | Elementa.UIComponent)[],
- *  stackVertical?: boolean,
- *  stackHorizontal?: boolean,
- * }} Children 
- */
+import { Ref } from './types';
 
-const getScreenWidth = () => new (Java.type('net.minecraft.client.gui.ScaledResolution'))(Client.getMinecraft()).func_78327_c();
-const getScreenHeight = () => new (Java.type('net.minecraft.client.gui.ScaledResolution'))(Client.getMinecraft()).func_78324_d();
-const getScreenMin = () => Math.min(getScreenWidth(), getScreenHeight());
-const getScreenMax = () => Math.max(getScreenWidth(), getScreenHeight());
+export type IDKConstraint = Elementa.SizeConstraint | Elementa.PositionConstraint | Elementa.CenterConstraint
+export type Size = number | string | IDKConstraint;
+export type BasicProps<T extends Elementa.UIComponent = Elementa.UIComponent> = {
+  x?: Size,
+  y?: Size,
+  w?: Size,
+  h?: Size,
+  effects?: Elementa.Effect[],
+  ref?: Ref<T>
+}
+export type Children = { 
+  children?: (undefined | string | Elementa.UIComponent)[],
+  stackVertical?: boolean,
+  stackHorizontal?: boolean,
+}
 
-/**
- * @param {string | number | Elementa.GeneralConstraint} val 
- * @param {number=} multi 
- * @returns {Elementa.GeneralConstraint}
- */
-export const parseNumeric = (val, multi = 1) => {
+export const getScreenWidth = () => new (Java.type('net.minecraft.client.gui.ScaledResolution'))(Client.getMinecraft()).func_78327_c();
+export const getScreenHeight = () => new (Java.type('net.minecraft.client.gui.ScaledResolution'))(Client.getMinecraft()).func_78324_d();
+export const getScreenMin = () => Math.min(getScreenWidth(), getScreenHeight());
+export const getScreenMax = () => Math.max(getScreenWidth(), getScreenHeight());
+
+export const parseNumeric = (val: Size, multi: number = 1): IDKConstraint  => {
   if(typeof val === 'string'){
     val = val.toLowerCase();
     if(val === 'center') return new Elementa.CenterConstraint();
@@ -46,44 +39,34 @@ export const parseNumeric = (val, multi = 1) => {
   return val;
 }
 
-/**
- * @template T
- * @template K
- * @param {T extends Record<string, any> ? T : never} props 
- * @param {K extends Record<string, number> ? K : never} keys
- * @returns {{[key in keyof T]: key extends keyof K ? Elementa.GeneralConstraint : T[key]}}
- */
-export const transformSizeProps = (props, keys) => {
-  const copy = {...props};
+export const transformSizeProps = <T extends Record<string, any>, K extends Record<string, number>>(
+  props: T,
+  keys: K
+): {[key in keyof T]: key extends keyof K ? IDKConstraint : T[key]} => {
+  const copy: any = {...props};
   for(let key in keys){
     if(copy[key] !== undefined) copy[key] = parseNumeric(copy[key], keys[key]);
   }
   return copy;
 }
 
-/**
- * @param {Elementa.UIComponent} elem 
- * @param {BasicProps} props 
- */
-export const applyBasicProps = (elem, props) => {
+export const applyBasicProps = <T extends Elementa.UIComponent>(elem: T, props: BasicProps<T>): T => {
   const safeProps = transformSizeProps(props, {x: 1, y: 1, w: 1, h: 1});
-  if(safeProps.w) elem.setWidth(safeProps.w);
-  if(safeProps.h) elem.setHeight(safeProps.h);
-  if(safeProps.y) elem.setX(safeProps.x);
-  if(safeProps.x) elem.setY(safeProps.y);
+  if(safeProps.w) elem.setWidth(safeProps.w as Elementa.WidthConstraint);
+  if(safeProps.h) elem.setHeight(safeProps.h as Elementa.HeightConstraint);
+  if(safeProps.y) elem.setX(safeProps.x as Elementa.XConstraint);
+  if(safeProps.x) elem.setY(safeProps.y as Elementa.YConstraint);
   if(safeProps.effects) elem.enableEffects(...safeProps.effects);
+  if(safeProps.ref) safeProps.ref.component = elem;
   return elem;
 }
 
-/**
- * @param {Elementa.UIComponent} elem 
- * @param {Children} props 
- */
-export const adoptChildren = (elem, props) => {
+export const adoptChildren = <T extends Elementa.UIComponent>(elem: T, props: Children): T => {
   const components = (props.children || [])
     .filter(c => !!c)
-    .map(c => typeof c === 'string' ? new Elementa.UIText(c) : c);
+    .map(c => typeof c === 'string' ? new Elementa.UIText(c) : c) as Elementa.UIComponent[];
   if(props.stackHorizontal) components.forEach(c => c.setX(new Elementa.SiblingConstraint()));
   if(props.stackVertical) components.forEach(c => c.setY(new Elementa.SiblingConstraint()));
-  return elem.addChildren(...components);
+  elem.addChildren(...components);
+  return elem;
 }

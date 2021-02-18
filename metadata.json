@@ -1,5 +1,5 @@
 {
   "name":"ElementaJSX",
-  "entry":"dist/index.js",
+  "entry":"./dist/index.js",
   "requires":["Elementa"]
 }
